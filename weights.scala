@@ -1,0 +1,247 @@
+import org.apache.spark.SparkContext
+import org.apache.spark.sql.SQLContext
+import org.apache.spark.SparkConf
+import org.apache.spark.sql.hive.HiveContext
+import java.util.Calendar
+import org.apache.spark.sql.SparkSession
+import scala.collection.mutable.ArrayBuffer
+
+import org.apache.spark._
+import org.apache.spark.rdd.NewHadoopRDD
+import org.apache.hadoop.fs.Path
+import scala.util.Random
+import org.apache.spark.sql.functions._
+//
+//
+import org.apache.log4j.Logger
+import org.apache.log4j.Level
+
+import com.google.cloud.hadoop.io.bigquery.BigQueryConfiguration
+import com.google.cloud.hadoop.io.bigquery.BigQueryFileFormat
+import com.google.cloud.hadoop.io.bigquery.GsonBigQueryInputFormat
+import com.google.cloud.hadoop.io.bigquery.output.BigQueryOutputConfiguration
+import com.google.cloud.hadoop.io.bigquery.output.IndirectBigQueryOutputFormat
+import com.google.gson.JsonObject
+import org.apache.hadoop.io.LongWritable
+import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat
+import org.apache.hadoop.conf.Configuration
+
+
+import org.apache.hadoop.io.LongWritable
+import org.apache.avro.generic.GenericData
+import com.google.cloud.hadoop.io.bigquery.AvroBigQueryInputFormat
+
+import com.samelamin.spark.bigquery._
+import java.io.{File, FileWriter, IOException, Writer}
+
+object weights
+{
+  private var sparkAppName = "weights"
+  private var sparkDefaultParllelism = null
+  private var sparkDefaultParallelismValue = "12"
+  private var sparkSerializer = null
+  private var sparkSerializerValue = "org.apache.spark.serializer.KryoSerializer"
+  private var sparkNetworkTimeOut = null
+  private var sparkNetworkTimeOutValue = "3600"
+  private var sparkStreamingUiRetainedBatches = null
+  private var sparkStreamingUiRetainedBatchesValue = "5"
+  private var sparkWorkerUiRetainedDrivers = null
+  private var sparkWorkerUiRetainedDriversValue = "5"
+  private var sparkWorkerUiRetainedExecutors = null
+  private var sparkWorkerUiRetainedExecutorsValue = "30"
+  private var sparkWorkerUiRetainedStages = null
+  private var sparkWorkerUiRetainedStagesValue = "100"
+  private var sparkUiRetainedJobs = null
+  private var sparkUiRetainedJobsValue = "100"
+  private var sparkJavaStreamingDurationsInSeconds = "10"
+  private var sparkNumberOfSlaves = 14
+  private var sparkRequestTopicShortName = null
+  private var sparkImpressionTopicShortName = null
+  private var sparkClickTopicShortName = null
+  private var sparkConversionTopicShortName = null
+  private var sparkNumberOfPartitions = 30
+  private var sparkClusterDbIp = null
+  private var clusterDbPort = null
+  private var insertQuery = null
+  private var insertOnDuplicateQuery = null
+  private var sqlDriverName = null
+  private var memorySet = "F"
+  private var enableHiveSupport = null
+  private var enableHiveSupportValue = "true"
+
+  def main(args: Array[String])
+  {
+
+   var startTimeQuery = System.currentTimeMillis
+
+  // Create a SparkSession. No need to create SparkContext. In Spark 2.0 the same effects can be achieved through SparkSession, without explicitly creating SparkConf, SparkContext or SQLContext as they are encapsulated within the SparkSession
+  val spark =  SparkSession.
+               builder().
+               appName(sparkAppName).
+               config("spark.driver.allowMultipleContexts", "true").
+               config("spark.hadoop.validateOutputSpecs", "false").
+               getOrCreate()
+
+             // change the values accordingly.
+             spark.conf.set("sparkDefaultParllelism", sparkDefaultParallelismValue)
+             spark.conf.set("sparkSerializer", sparkSerializerValue)
+             spark.conf.set("sparkNetworkTimeOut", sparkNetworkTimeOutValue)
+
+import spark.implicits._
+spark.sparkContext.setLogLevel("ERROR")
+println ("\nStarted at"); spark.sql("SELECT FROM_unixtime(unix_timestamp(), 'dd/MM/yyyy HH:mm:ss.ss') ").collect.foreach(println)
+
+val HadoopConf = spark.sparkContext.hadoopConfiguration
+
+//get and set the env variables
+
+val bucket = HadoopConf.get("fs.gs.system.bucket")
+val projectId = HadoopConf.get("fs.gs.project.id")
+val jobName = "weightsjob"
+HadoopConf.set(BigQueryConfiguration.PROJECT_ID_KEY, projectId)
+HadoopConf.set(BigQueryConfiguration.GCS_BUCKET_KEY, bucket)
+
+val inputTable = "staging.weights_date_staging"
+val fullyQualifiedInputTableId = projectId+":"+inputTable
+val targetDataset = "test"
+val targetTable = "weights_date"
+val targetRS = "weights_RS"
+val targetMD = "weights_MODEL"
+val targetML = "weights_ML_RESULTS"
+val outputTable = targetDataset+"."+targetTable
+val outputRS = targetDataset+"."+targetRS
+val outputMD = targetDataset+"."+targetMD
+val outputML = targetDataset+"."+targetML
+val fullyQualifiedOutputTableId = projectId+":"+outputTable
+val fullyQualifiedoutputRS = projectId+":"+outputRS
+val fullyQualifiedoutputMD = projectId+":"+outputMD
+val fullyQualifiedoutputML = projectId+":"+outputML
+val jsonKeyFile="/home/hduser/GCPFirstProject-d75f1b3a9817.json"
+val datasetLocation="europe-west2"
+val writedisposition="WRITE_TRUNCATE"
+// Set up GCP credentials
+spark.sqlContext.setGcpJsonKeyFile(jsonKeyFile)
+// Set up BigQuery project and bucket
+spark.sqlContext.setBigQueryProjectId(projectId)
+spark.sqlContext.setBigQueryGcsBucket(bucket)
+spark.sqlContext.setBigQueryDatasetLocation(datasetLocation)
+var sqltext = ""
+  // Delete existing data in target BigQuery table if exists
+  sqltext = "SELECT size_bytes FROM "+targetDataset+".__TABLES__ WHERE table_id='"+targetTable+"'"
+  var size = spark.sqlContext.runDMLQuery(sqltext)
+try
+{
+  println("\nDeleting data from the output table " + outputTable + " if it exists")
+  sqltext = "DELETE from " + outputTable + " WHERE True"
+  spark.sqlContext.runDMLQuery(sqltext)
+}
+catch
+{
+  case ex: IOException => { println("Table "+ fullyQualifiedOutputTableId + " not found")}
+}
+//read data from the staging (input) Table
+println("\nreading data from " + inputTable)
+val df = spark.sqlContext
+          .read
+          .format("com.samelamin.spark.bigquery")
+          .option("tableReferenceSource",fullyQualifiedInputTableId)
+          .load()
+
+println("\nInput table schema")
+df.printSchema
+
+// Create a new DF based on CAST columns
+//
+val df2 = df.select('datetaken.cast("DATE").as("datetaken"),'weight.cast("DOUBLE").as("weight"))
+
+println("\nModified table schema for output storage")
+df2.printSchema
+
+// Save data to a BigQuery table
+println("\nsaving data to " + outputTable)
+
+df2.saveAsBigQueryTable(fullyQualifiedOutputTableId)
+println("\nreading data from " + outputTable + ", and counting rows")
+
+// Load everything from the table and count the number of rows
+val weights = spark.sqlContext.bigQueryTable(fullyQualifiedOutputTableId)
+weights.agg(count("*").as("Rows in the output table " + outputTable)).show
+
+import org.apache.spark.sql.expressions.Window
+val wSpec = Window.partitionBy(date_format('datetaken,"EEEE"))
+val wSpec2 = Window.orderBy('weightkg)
+val rs1 = weights.filter('datetaken.between("2018-01-01","2018-12-31")).
+        select(date_format('datetaken,"EEEE").as("DOW"),
+        date_format('datetaken,"u").as("DNUMBER"),
+        avg('weight).over(wSpec).as("weightkg"),
+        stddev('weight).over(wSpec).as("StandardDeviation"),
+        count(date_format('datetaken,"EEEE")).over(wSpec).as("sampleSize")).distinct.orderBy(desc("weightkg"))
+
+val rs2= rs1.select(rank.over(wSpec2).as("Rank"),
+             'DOW.as("DayofWeek"),
+             'DNUMBER.cast("Integer").as("DayNumber"),
+             round('weightkg,3).as("AverageForDayOfWeekInKg"),
+             round('StandardDeviation,2).as("StandardDeviation"),
+             'sampleSize.cast("Integer").as("sampleSizeInDays"))
+
+  // Delete existing data in result set table if exists
+  sqltext = "SELECT size_bytes FROM "+targetDataset+".__TABLES__ WHERE table_id='"+targetRS+"'"
+  spark.sqlContext.runDMLQuery(sqltext)
+try
+{
+  println("\nDeleting data from the result set table " + outputRS + " if it exists")
+  sqltext = "DELETE from " + outputRS + " WHERE True"
+  spark.sqlContext.runDMLQuery(sqltext)
+}
+catch
+{
+  case ex: IOException => { println("Table "+ fullyQualifiedoutputRS + " not found")}
+}
+
+// Save the result set to a BigQuery table
+println("\nsaving data to " + fullyQualifiedoutputRS)
+rs2.saveAsBigQueryTable(fullyQualifiedoutputRS)
+
+var sqltext1 = "CREATE OR REPLACE MODEL " + outputMD
+var sqltext2 =
+"""
+ OPTIONS
+ ( model_type='linear_reg',
+   data_split_col='DayNumber',
+   data_split_method='seq',
+   ls_init_learn_rate=.15,
+   l1_reg=1,
+   max_iterations=5,
+   data_split_eval_fraction=0.3,
+   input_label_cols=['AverageForDayOfWeekInKg']
+ )
+AS SELECT * FROM 
+"""
+println("Model "+ outputMD+ " has the following code\n"+sqltext1+sqltext2+outputRS)
+println("\nCreating model " + outputMD)
+spark.sqlContext.runDMLQuery(sqltext1+sqltext2+outputRS)
+
+// Temp output bucket needed to read a new table that is deleted upon completion of job.
+val gcsTempBucket = HadoopConf.get(BigQueryConfiguration.GCS_BUCKET_KEY)
+var tempPath = s"gs://$gcsTempBucket/spark-bigquery/${java.lang.System.currentTimeMillis}/"
+HadoopConf.set(BigQueryConfiguration.TEMP_GCS_PATH_KEY, tempPath)
+println("\n Evaluating model " +  fullyQualifiedoutputMD + " with the following code\n" + "CREATE TABLE IF NOT EXISTS `"+ projectId+"."+outputML +"` AS SELECT * FROM ML.EVALUATE(MODEL `"+projectId+"."+outputMD+"`, (SELECT * FROM `"+ projectId+"."+outputRS + "`))")
+
+sqltext = "CREATE TABLE IF NOT EXISTS `"+ projectId+"."+outputML+"` AS SELECT * FROM ML.EVALUATE(MODEL `"+projectId+"."+outputMD+"`, (SELECT * FROM `"+ projectId+"."+outputRS + "`))"
+spark.sqlContext.runDMLQuery(sqltext)
+
+//read data from the view just created
+println("\nreading data from "+projectId+":"+outputML +" displaying the ML evaluation parameters")
+val MLresult = spark.sqlContext.bigQueryTable(fullyQualifiedoutputML)
+println("\nResults of linear regression fit to Mich's week of day weight measurement averaged over one year\n")
+MLresult.select('mean_absolute_error.as("Mean Absolute Error"),
+                'mean_squared_error.as("Mean Squared Error"),
+                'mean_squared_log_error.as("Mean Squared Log Error"),
+                'median_absolute_error.as("Median Absolute Error"),
+                'r2_score.as("r2 Score [R squared]"),
+                'explained_variance.as("Explained Variance")).
+         show()
+println ("\nFinished at"); spark.sql("SELECT FROM_unixtime(unix_timestamp(), 'dd/MM/yyyy HH:mm:ss.ss') ").collect.foreach(println)
+sys.exit
+  }
+}

@@ -1,0 +1,8 @@
+gcloud beta dataproc clusters create ctpcluster --region europe-west2 --zone europe-west2-c --single-node --master-machine-type n1-standard-4 --master-boot-disk-size 500 --image-version 2.0-debian10 --project $GCPPROJECT
+
+gcloud beta dataproc clusters delete ctpcluster --region europe-west2
+
+
+gcloud compute addresses create ctpcluster-m --project=$GCPPROJECT --region=europe-west2
+
+gcloud compute instances add-access-config ctpcluster-m --project=$GCPPROJECT --zone=europe-west2-c --address=34.105.208.107

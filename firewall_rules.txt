@@ -1,0 +1,57 @@
+gcloud compute firewall-rules create NAME \
+    [--network NETWORK; default="default"] \
+    [--priority PRIORITY;default=1000] \
+    [--direction (ingress|egress|in|out); default="ingress"] \
+    [--action (deny | allow )] \
+    [--target-tags TAG[,TAG,...]] \
+    [--target-service-accounts=IAM_SERVICE_ACCOUNT[,IAM_SERVICE_ACCOUNT,...]] \
+    [--source-ranges CIDR_RANGE[,CIDR_RANGE,...]] \
+    [--source-tags TAG,TAG,] \
+    [--source-service-accounts=IAM_SERVICE_ACCOUNT[,IAM_SERVICE_ACCOUNT,...]] \
+    [--destination-ranges CIDR_RANGE[,CIDR_RANGE,...]] \
+    [--rules (PROTOCOL[:PORT[-PORT]],[PROTOCOL[:PORT[-PORT]],...]] | all ) \
+    [--disabled | --no-disabled] \
+    [--enable-logging | --no-enable-logging] \
+    [--logging-metadata LOGGING_METADATA]
+
+Use the parameters as follows. More details about each are available in the SDK reference documentation.
+
+--network The network for the rule. If omitted, the rule is created in the default network. If you don't have a default network or want to create the rule in a specific network, you must use this field.
+--priority A numerical value that indicates the priority for the rule. The lower the number, the higher the priority.
+--direction The direction of traffic, either ingress or egress.
+--action The action on match, either allow or deny. Must be used with the --rules flag.
+Specify a target in one of three ways:
+Omit --target-tags and --target-service-accounts if the rule should apply to all targets in the network.
+--target-tags Use this flag to define targets by network tags.
+--target-service-accounts Use this flag to define targets by associated service accounts.
+For an ingress rule, specify a source:
+Omit --source-ranges, source-tags, and --source-service-accounts if the ingress source should be everywhere, 0.0.0.0/0.
+--source-ranges Use this flag to specify ranges of source IP addresses in CIDR format.
+--source-tags Use this flag to specify source instances by network tags. Filtering by source tag is only available if the target is not specified by service account. For more information, see filtering by service account versus network tag.
+--source-ranges and --source-tags can be used together. If both are specified, the effective source set is the union of the source range IP addresses and the instances identified by network tags, even if the tagged instances do not have IPs in the source ranges.
+--source-service-accounts Use this flag to specify instances by the service accounts they use. Filtering by source service account is only available if the target is not specified by network tag. For more information, see filtering by service account versus network tag. --source-ranges and --source-service-accounts can be used together. If both are specified, the effective source set is the union of the source range IP addresses and the instances identified by source service accounts, even if the instances identified by source service accounts do not have IPs in the source ranges.
+For an egress rule, specify a destination:
+Omit --destination-ranges if the egress destination should be anywhere, 0.0.0.0/0.
+--destination-ranges Use this flag to specify ranges of destination IP addresses in CIDR format.
+--rules A list of protocols and destination ports to which the rule applies. Use all to make the rule applicable to all protocols and all destination ports. Requires the --action flag.
+By default, firewall rules are created and enforced automatically; however, you can change this behavior.
+If both --disabled and --no-disabled are omitted, the firewall rule is created and enforced.
+--disabled Add this flag to create the firewall rule but not enforce it. The firewall rule remains disabled until you update the firewall rule to enable it.
+--no-disabled Add this flag to ensure the firewall rule is enforced.
+--enable-logging | --no-enable-logging You can enable Firewall Rules Logging for a rule when you create or update it. Firewall Rules Logging allows you audit, verify, and analyze the effects of your firewall rules. See Firewall Rules Logging for details.
+--logging-metadata If you enable logging, by default, Firewall Rules Logging includes base and metadata fields. You can omit metadata fields to save storage costs. For more information, see Using Firewall Rules Logging.
+
+notes
+
+https://cloud.google.com/vpc/docs/firewalls#default_firewall_rules
+
+Every VPC network has two implied firewall rules. These rules exist, but are not shown in the Cloud Console:
+
+The implied allow egress rule: An egress rule whose action is allow, destination is 0.0.0.0/0, and priority is the lowest possible (65535) lets any instance send traffic to any destination, 
+except for traffic blocked by GCP. Outbound access may be restricted by a higher priority firewall rule. Internet access is allowed if no other firewall rules deny outbound traffic and if the instance has an external IP address or uses a NAT instance. Refer to Internet access requirements for more details.
+
+The implied deny ingress rule: An ingress rule whose action is deny, source is 0.0.0.0/0, and priority is the lowest possible (65535) protects all instances by blocking incoming traffic to them.
+Incoming access may be allowed by a higher priority rule. Note that the default network includes some additional rules that override this one, allowing certain types of incoming traffic.
+
+Google Cloud HTTP(S) Load Balancing is a global, proxy-based Layer 7 load balancer that enables you to run and scale your services worldwide behind a single external IP address. External HTTP(S) Load Balancing distributes HTTP and HTTPS traffic to backends hosted on Compute Engine and Google Kubernetes Engine (GKE).
+

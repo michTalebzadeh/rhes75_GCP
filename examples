@@ -1,0 +1,192 @@
+gsutil ls gs://
+hdfs --loglevel debug dfs -ls gs://etcbucket
+rm -rf ll_18201960_gcp
+-- create hive table
+CREATE TABLE ll_18201960_gcp STORED AS AVRO AS select * from ll_18201960;
+hdfs dfs -get /user/hive/warehouse/accounts.db/ll_18201960_gcp .
+gsutil rm -r gs://accountsbucket/accounts/ll_18201960
+gsutil rm -r gs://accountsbucket/accounts/ll_18201960_gcp
+gsutil cp -r ll_18201960_gcp gs://accountsbucket/accounts/ll_18201960_gcp
+gsutil cp -r transactioncodes.csv gs://accountsbucket/accounts/transactioncodes.csv
+gsutil cp gs://spark-lib/bigquery/spark-bigquery-latest.jar .
+bq load --autodetect --replace=true --source_format=ORC accounts.ll_18201960_gcp "gs://accountsbucket/accounts/ll_18201960_gcp/*"
+bq load --autodetect --replace=true --source_format=ORC accounts.ll_18201960_gcp "gs://accountsbucket/accounts/ll_18201960_gcp/*"
+bq query --use_legacy_sql=false "select * from accounts.ll_18201960_gcp"
+hadoop fs -ls gs://etcbucket
+gcloud compute ssh dpcluster-m --zone europe-west2-c
+gcloud compute scp dba.tar hduserdpcluster-m:~ --zone europe-west2-c
+bq show accounts.ll_18740868
+bq ls
+
+gsutil cp -r ll_18201960.csv gs://etcbucket/ll_18201960.csv
+bq load --skip_leading_rows=1 accounts.ll_18201960_csv2 gs://etcbucket/ll_18201960.csv TransactionDate:date,TransactionType:string,SortCode:string,AccountNumber:string,TransactionDescription:string,DebiAmount:float,CreditAmount:float,Balance:float
+bq query --use_legacy_sql=false "select * from accounts.ll_18201960_csv2"
+
+gsutil cp weights_date.csv gs://etcbucket/weights_date.csv
+
+
+gsutil rm -r gs://etcbucket/DUMMY.csv
+gsutil cp -r /home/hduser/dba/bin/python/DUMMY.csv gs://etcbucket/
+bq load --autodetect --replace=true --source_format=CSV  test.DUMMY gs://etcbucket/DUMMY.csv
+bq query --use_legacy_sql=false "select * from test.DUMMY"
+
+gsutil ls -r gs://
+gsutil stat gs://etcbucket/DUMMY.csv
+
+gsutil -q stat gs://etcbucket/DUMMY.csv; echo $?
+# Result 0 means exists; 1 means not exists
+
+CREATE TABLE ilayer.joint_accounts_gcp STORED AS AVRO AS select * from ilayer.joint_accounts;
+
+hdfs dfs -get /user/hive/warehouse/ilayer.db/joint_accounts_gcp .
+
+gsutil cp -r joint_accounts_gcp gs://michbucket/accounts/joint_accounts_gcp
+
+hdfs dfs -get /user/hive/warehouse/ilayer.db/joint_accounts_gcp .
+gsutil cp -r joint_accounts_gcp gs://michbucket/accounts/joint_accounts_gcp
+bq rm -f -t michbucket.joint_accounts_gcp_stg
+bq load --source_format=AVRO michbucket.joint_accounts_gcp_stg "gs://michbucket/accounts/joint_accounts_gcp/*" TransactionDate:integer,TransactionType:string,Description:string,moneyin:float,moneyout:float,accountName:string,sortcode:string,accountnumber:string,op_type:integer,op_time:integer,bank:string
+bq query --use_legacy_sql=false "select date_from_unix_date(transactiondate), description, moneyin,moneyout from michbucket.joint_accounts_gcp_stg where date_from_unix_date(transactiondate) >= '2020-01-01' order by transactiondate desc"
+bq query --use_legacy_sql=false "select count(1) from michbucket.joint_accounts_gcp_stg where date_from_unix_date(transactiondate) >= '2020-01-01'"
+bq rm -f -t michbucket.joint_accounts_gcp
+bq query --use_legacy_sql=false "CREATE TABLE test.joint_accounts
+AS SELECT DATE_FROM_UNIX_DATE(transactiondate) AS transactiondate
+, TransactionType
+, Description
+, moneyin
+, moneyout
+, accountname
+, sortcode
+, accountnumber
+, op_type
+, EXTRACT(DATETIME FROM TIMESTAMP_MILLIS(op_time)) AS op_time
+, bank 
+FROM 
+michbucket.joint_accounts_gcp_stg where 1 = 2"
+bq query --use_legacy_sql=false "select transactiondate, description, moneyin,moneyout,op_time from michbucket.joint_accounts_gcp where transactiondate >= '2020-01-01' order by transactiondate desc"
+hive -e "select * from ilayer.joint_accounts_gcp where lower(description) like 'sky digital' and transactiondate >= '2020-01-01'"
+
+gcloud beta auth application-default print-access-token
+
+
+
+
+1852    gsutil ls gs://etcbucket/randomdata/
+1853    gsutil ls gs://etcbucket/
+1854    gsutil ls gs://etcbucket/randomdata/
+1855    gsutil mv gs://etcbucket/randomdatapy gs://etcbucket/randomdata/archive/
+        gsutil mv gs://etcbucket/randomdata/files gs://etcbucket/randomdata/staging
+
+hdfs dfs -get /user/hive/warehouse/test.db/randomdatapy_208150201_208150210 .
+gsutil cp -r randomdatapy_208150201_208150210 gs://etcbucket/randomdata/staging/randomdatapy_208150201_208150210
+
+gcloud projects list
+## create a biquery tables in test using js schema
+bq mk --table test.marketdata ./marketdata.js
+gcloud dataproc clusters delete ctpcluster --region=europe-west2
+
+## create a GKE cluster
+gcloud beta container --project "axial-glow-224522" clusters create "gke-volcano" --region "europe-west2" --no-enable-basic-auth --cluster-version "1.19.10-gke.1600" --release-channel "regular" --machine-type "e2-medium" --image-type "COS_CONTAINERD" --disk-type "pd-standard" --disk-size "100" --metadata disable-legacy-endpoints=true --scopes "https://www.googleapis.com/auth/devstorage.read_only","https://www.googleapis.com/auth/logging.write","https://www.googleapis.com/auth/monitoring","https://www.googleapis.com/auth/servicecontrol","https://www.googleapis.com/auth/service.management.readonly","https://www.googleapis.com/auth/trace.append" --max-pods-per-node "110" --num-nodes "3" --enable-stackdriver-kubernetes --enable-ip-alias --network "projects/axial-glow-224522/global/networks/default" --subnetwork "projects/axial-glow-224522/regions/europe-west2/subnetworks/default" --no-enable-intra-node-visibility --default-max-pods-per-node "110" --no-enable-master-authorized-networks --addons HorizontalPodAutoscaling,HttpLoadBalancing,GcePersistentDiskCsiDriver --enable-autoupgrade --enable-autorepair --max-surge-upgrade 1 --max-unavailable-upgrade 0 --enable-shielded-nodes --node-locations "europe-west2-c"
+
+gcloud compute --project=axial-glow-224522 instance-groups managed create gke-volcano --base-instance-name=gke-volcano --template=gke-volcano --size=1 --zone=europe-west2-c
+
+gcloud beta compute --project "axial-glow-224522" instance-groups managed set-autoscaling "gke-volcano" --zone "europe-west2-c" --cool-down-period "60" --max-num-replicas "3" --min-num-replicas "1" --target-cpu-utilization "0.6" --mode "on"
+
+gcloud beta container --project "axial-glow-224522" clusters create "gke-volcano" --zone "europe-west2-c" --no-enable-basic-auth --cluster-version "1.19.9-gke.1900" --release-channel "regular" --machine-type "e2-medium" --image-type "COS_CONTAINERD" --disk-type "pd-standard" --disk-size "100" --metadata disable-legacy-endpoints=true --scopes "https://www.googleapis.com/auth/devstorage.read_only","https://www.googleapis.com/auth/logging.write","https://www.googleapis.com/auth/monitoring","https://www.googleapis.com/auth/servicecontrol","https://www.googleapis.com/auth/service.management.readonly","https://www.googleapis.com/auth/trace.append" --max-pods-per-node "110" --num-nodes "3" --enable-stackdriver-kubernetes --enable-ip-alias --network "projects/axial-glow-224522/global/networks/default" --subnetwork "projects/axial-glow-224522/regions/europe-west2/subnetworks/default" --no-enable-intra-node-visibility --default-max-pods-per-node "110" --no-enable-master-authorized-networks --addons HorizontalPodAutoscaling,HttpLoadBalancing,GcePersistentDiskCsiDriver --enable-autoupgrade --enable-autorepair --max-surge-upgrade 1 --max-unavailable-upgrade 0 --enable-shielded-nodes --node-locations "europe-west2-c"
+
+
+{
+  "id": "ctpcluster",
+  "name": "projects/axial-glow-224522/regions/europe-west2/autoscalingPolicies/ctpcluster",
+  "basicAlgorithm": {
+    "yarnConfig": {
+      "scaleUpFactor": 1,
+      "scaleDownFactor": 1,
+      "gracefulDecommissionTimeout": "3600s"
+    },
+    "cooldownPeriod": "120s"
+  },
+  "workerConfig": {
+    "minInstances": 2,
+    "maxInstances": 2,
+    "weight": 1
+  },
+  "secondaryWorkerConfig": {
+    "minInstances": 1,
+    "maxInstances": 10,
+    "weight": 1
+  }
+}
+
+gcloud dataproc clusters stop ctpcluster --region=europe-west2
+
+gcloud dataproc clusters update ctpcluster --autoscaling-policy=ctpcluster --region=europe-west2
+
+## estimated cost
+bq query --use_legacy_sql=false --dry_run 'select * from test.randomData'
+
+insert into test.randomData2
+(ID, CLUSTERED, SCATTERED,RANDOMISED, RANDOM_STRING, SMALL_VC, PADDING, op_type, op_time
+) select ID, CLUSTERED, SCATTERED, RANDOMISED, RANDOM_STRING, SMALL_VC, PADDING, op_type, op_time from test.randomData
+
+alter table test.randomData2 rename to randomData
+
+select *
+
+from collector__streaming.all_raw_events
+
+where _partitiondate = current_date()
+
+   and raw_payload like '%hxde_addonprices%'
+
+limit 10
+
+select *
+from test.randomData
+where _partitiondate >= current_date() - 1
+limit 10
+
+select *
+from test.randomData
+where id > 200
+order by id
+limit 10
+
+select *
+from test.randomData
+where _partitiondate >= current_date()
+order by id
+limit 10
+
+# full table size
+select 
+  sum(size_bytes)/pow(10,9) as size
+from
+  test.__TABLES__
+where 
+  table_id = 'randomData'
+
+## full dataset size in bytes
+select 
+  sum(size_bytes)/pow(10,9) as size
+from
+  test.__TABLES__
+
+## example beam on gcp
+python3 -m apache_beam.examples.wordcount \ 
+                                          --input gs://dataflow-samples/shakespeare/kinglear.txt \
+                                          --output gs://etcbucket/beam/counts \
+                                          --runner DataflowRunner \
+                                          --project $PROJECT \
+                                          --region $REGION \
+                                          --temp_location gs://tmp_storage_bucket/tmp
+
+gcloud beta container --project $PROJECT clusters describe 'spark-on-gke' --region europe-west2
+
+gcloud beta container --project $PROJECT clusters delete 'spark-on-gke' --region europe-west2
+
+bq extract --compression GZIP 'test.randomData' gs://etcbucket/BQsnapshots/randomData
+
+gcloud projects get-iam-policy $PROJECT
+gcloud projects get-iam-policy $PROJECT --flatten="bindings[].members" --format='table(bindings.role)' --filter="bindings.members:spark-bq@axial-glow-224522.iam.gserviceaccount.com"
+gcloud projects get-iam-policy $PROJECT --flatten="bindings[].members" --format="table(bindings.members)" --filter="bindings.role:storage.admin

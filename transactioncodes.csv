@@ -1,0 +1,43 @@
+transactioncodes.id,transactioncodes.transactiontype,transactioncodes.description
+1,BGC,Bank Giro Credit
+2,BNS,Bonus
+3,BP,Bill Payment
+4,CHG,Charge
+5,CHQ,Cheque
+6,COM,Commission
+7,COR,Correction
+8,CPT,Cashpoint
+9,CSH,Cash
+10,CSQ,Cash/Cheque
+11,DD,Direct Debit
+12,DEB,Debit Card
+13,DEP,Deposit
+14,EFT,EFTPOS (electronic funds transfer at point of sale)
+15,EUR,Euro Cheque
+16,FE,Foreign Exchange
+17,FEE,Fixed Service Charge
+18,FPC,Faster Payment charge
+19,FPI,Faster Payment incoming
+20,FPO,Faster Payment outgoing
+21,IB,Internet Banking
+22,INT,Interest
+23,MPI,Mobile Payment incoming
+24,MPO,Mobile Payment outgoing
+25,MTG,Mortgage
+26,NS,National Savings Dividend
+27,NSC,National Savings Certificates
+28,OTH,Other
+29,PAY,Payment
+30,PSB,Premium Savings Bonds
+31,PSV,Paysave
+32,SAL,Salary
+33,SPB,Cashpoint
+34,SO,Standing Order
+35,STK,Stocks/Shares
+36,TD,Dep Term Dec
+37,TDG,Term Deposit Gross Interest
+38,TDI,Dep Term Inc
+39,TDN,Term Deposit Net Interest
+40,TFR,Transfer
+41,UT,Unit Trust
+42,SUR,Excess Reject

@@ -1,0 +1,7 @@
+#!/bin/bash
+
+
+gcloud projects add-iam-policy-binding iam-sa${PROJECT}iam.gserviceaccount.com \
+    --role roles/iam.workloadIdentityUser \
+    --member "serviceAccount:${PROJECT}.svc.id.goog[spark/iam-sa]"
+

@@ -1,0 +1,17 @@
+#!/bin/bash
+
+kubectl create namespace spark
+
+kubectl create serviceaccount spark-sa \
+    --namespace spark
+
+gcloud iam service-accounts create iam-sa \
+    --project=${PROJECT} 
+
+## Allow the Kubernetes service account to impersonate the IAM service account by adding an IAM policy binding between the two service accounts. 
+## This binding allows the Kubernetes service account to act as the IAM service account.
+
+gcloud iam service-accounts add-iam-policy-binding iam-sa${PROJECT}iam.gserviceaccount.com \
+    --role roles/iam.workloadIdentityUser \
+    --member "serviceAccount:${PROJECT}.svc.id.goog[spark/iam-sa]"
+
