@@ -21,7 +21,7 @@ variable "zone" {
 # Service Account Key File Path
 variable "service_account_key_file" {
   description = "The file path to your GCP service account key JSON file."
-  default =  "/home/hduser/GCPFirstProject-d75f1b3a9817.json"
+  default =  "./GCPFirstProject-d75f1b3a9817.json"
 }
 
 # Machine Type
