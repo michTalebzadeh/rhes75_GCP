@@ -27,3 +27,4 @@ resource "google_compute_network" "vpc_network" {
   name                    = var.machine_name
   auto_create_subnetworks = true
 }
+
