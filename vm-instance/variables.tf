@@ -37,9 +37,12 @@ variable "instance_count" {
   default     = 1
 }
 
-# machine and network names
+variable "vm_instance_name" {
+  description = "The name of your VM instance."
+  default     = "spark-nex"
+}
 
-variable "machine_name" {
-  description = "vm and subnet names"
-  default     = "spark-nex" 
+variable "network_name" {
+  description = "The name of your network."
+  default     = "spark-nex-network"
 }
