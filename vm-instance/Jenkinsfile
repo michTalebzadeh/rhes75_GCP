@@ -1,0 +1,52 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Checkout') {
+            steps {
+                // Checkout your Git repository
+                checkout scm
+            }
+        }
+        
+        stage('Terraform Init') {
+            steps {
+                // Initialize Terraform (downloads necessary plugins and modules)
+                sh 'terraform init'
+            }
+        }
+        
+        stage('Terraform Plan') {
+            steps {
+                // Create a Terraform plan
+                sh 'terraform plan -out=tfplan'
+            }
+        }
+        
+        stage('Terraform Apply') {
+            steps {
+                // Apply the Terraform plan to create the resources
+                sh 'terraform apply -auto-approve tfplan'
+            }
+        }
+        
+        stage('Terraform Destroy') {
+            steps {
+                // If needed, you can add a stage to destroy the resources
+                // sh 'terraform destroy -auto-approve'
+            }
+        }
+    }
+    
+    post {
+        success {
+            // Notify or perform additional actions upon successful provisioning
+        }
+        
+        failure {
+            // Notify or perform actions if the provisioning fails
+        }
+    }
+}
+
+
