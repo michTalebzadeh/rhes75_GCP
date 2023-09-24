@@ -33,6 +33,7 @@ pipeline {
         stage('Terraform Destroy') {
             steps {
                 // If needed, you can add a stage to destroy the resources
+                echo 'Build succeeded, change line to destroy it'
                 // sh 'terraform destroy -auto-approve'
             }
         }
