@@ -40,11 +40,11 @@ pipeline {
 
     post {
         success {
-            // Notify or perform additional actions upon successful provisioning
+            echo 'Build succeeded' // This will print 'Build succeeded' in the console
         }
 
         failure {
-            // Notify or perform actions if the provisioning fails
+            echo 'Build failed' // This will print 'Build failed' in the console
         }
     }
 }
