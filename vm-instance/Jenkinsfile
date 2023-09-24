@@ -5,48 +5,56 @@ pipeline {
         stage('Checkout') {
             steps {
                 // Checkout your Git repository with the 'main' branch
-                checkout([$class: 'GitSCM', branches: [[name: 'master']], userRemoteConfigs: [[url: 'https://github.com/michTalebzadeh/rhes75_GCP.git']]])
+                checkout([$class: 'GitSCM', branches: [[name: 'main']], userRemoteConfigs: [[url: 'https://github.com/michTalebzadeh/rhes75_GCP.git']]])
             }
         }
 
         stage('Terraform Init') {
             steps {
-                // Initialize Terraform (downloads necessary plugins and modules)
-                sh 'terraform init'
+                // Navigate to the vm-instance directory and then initialize Terraform
+                dir('vm-instance') {
+                    sh 'terraform init'
+                }
             }
         }
 
         stage('Terraform Plan') {
             steps {
-                // Create a Terraform plan
-                sh 'terraform plan -out=tfplan'
+                // Navigate to the vm-instance directory and then create a Terraform plan
+                dir('vm-instance') {
+                    sh 'terraform plan -out=tfplan'
+                }
             }
         }
 
+        // Add other stages for apply and destroy as needed, with the 'dir' step.
+
         stage('Terraform Apply') {
             steps {
-                // Apply the Terraform plan to create the resources
-                sh 'terraform apply -auto-approve tfplan'
+                dir('vm-instance') {
+                    sh 'terraform apply -auto-approve tfplan'
+                }
             }
         }
 
         stage('Terraform Destroy') {
             steps {
-                // If needed, you can add a stage to destroy the resources
-                echo 'Build succeeded, change line to destroy it'
-                // sh 'terraform destroy -auto-approve'
+                dir('vm-instance') {
+                    sh 'terraform destroy -auto-approve'
+                }
             }
         }
     }
 
     post {
         success {
-            echo 'Build succeeded' // This will print 'Build succeeded' in the console
+            // Notify or perform additional actions upon successful provisioning
+            echo 'Provisioning succeeded!'
         }
 
         failure {
-            echo 'Build failed' // This will print 'Build failed' in the console
+            // Notify or perform actions if the provisioning fails
+            echo 'Provisioning failed!'
         }
     }
 }
-
